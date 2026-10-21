@@ -17,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-MAX_SIZE = 20 * 1024 * 1024  # 20MB
+MAX_SIZE = 10 * 1024 * 1024  # 10MB
 
 @app.post("/extract-text")
 async def extract_text(file: UploadFile = File(...)):
