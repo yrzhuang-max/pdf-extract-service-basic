@@ -28,7 +28,7 @@ async def extract_text(file: UploadFile = File(...)):
     # 读取文件内容，同时校验大小
     content = await file.read()
     if len(content) > MAX_SIZE:
-        raise HTTPException(status_code=400, detail="File too large, max 20MB.")
+        raise HTTPException(status_code=400, detail="File too large, max 10MB.")
 
     try:
         reader = pypdf.PdfReader(BytesIO(content))
