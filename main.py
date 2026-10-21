@@ -1,34 +1,42 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pypdf import PdfReader
+import pypdf
+from io import BytesIO
 
-app = FastAPI()
+app = FastAPI(title="PDF Extract Service")
 
+# CORS，允许你的网站域名访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=[
+        "https://filedocswift.com",
+        "https://www.filedocswift.com"
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.post("/extract-text")
-async def extract(file: UploadFile = File(...)):
-    try:
-        reader = PdfReader(file.file)
-        full_text = ""
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                full_text += text + "\n"
+MAX_SIZE = 20 * 1024 * 1024  # 20MB
 
-        full_text = full_text.strip()
-        if not full_text:
-            return {"error": "no_text", "text": ""}
-        # 只要成功拿到文字，就标记存在不可识别内容（pypdf无法区分哪些区域是图片，保守提示）
-        return {
-            "text": full_text,
-            "has_unreadable_content": True
-        }
+@app.post("/extract-text")
+async def extract_text(file: UploadFile = File(...)):
+    # 校验后缀
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed.")
+
+    # 读取文件内容，同时校验大小
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="File too large, max 20MB.")
+
+    try:
+        reader = pypdf.PdfReader(BytesIO(content))
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return {"text": text.strip()}
     except Exception as e:
-        return {"error": "parse_error", "msg": str(e)}
+        raise HTTPException(status_code=500, detail=f"Failed to parse PDF: {str(e)}")
