@@ -48,15 +48,17 @@ async def extract_text(file: UploadFile = File(...)):
         elif has_text_page and has_non_text_page:
             doc_type = "mixed"
         else:
-            doc_type = "normal"
+            doc_type = "text"
 
         text = text.strip()
-        # 过滤不可打印控制字符，重点清除换页符 \f(\x0c)，保留换行\n、制表\t
+        # 过滤不可打印控制字符，清除换页符 \f(\x0c)，保留换行\n、制表\t
         text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1F]', '', text)
 
         return {
             "text": text,
             "type": doc_type
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse PDF: {str(e)}")
+
+    except Exception:
+        # 不返回原始异常内容，避免信息泄露
+        raise HTTPException(status_code=500, detail="Failed to parse PDF.")
